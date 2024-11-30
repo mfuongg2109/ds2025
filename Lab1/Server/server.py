@@ -1,7 +1,5 @@
-# server.py
 import socket
 
-# Server configuration
 HOST = input("Your server ip address?\n") #enter your host ip address
 PORT = 2109  # port
 

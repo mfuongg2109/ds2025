@@ -1,0 +1,290 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{graphicx} %inserting images
+\usepackage{float} %image placement
+\usepackage{titling} %title placement
+\usepackage{hyperref}  %clickable links
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black, fill=purple!30]
+\tikzstyle{process} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!30]
+\tikzstyle{ellipse} = [circle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=blue!30]
+
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
+\hypersetup{
+    colorlinks=true,   % Enable colored links
+    linkcolor=black,    % Color of internal links (sections, TOC, etc.)
+    urlcolor=blue      % Color for URLs
+}
+\lstset{
+    frame=single,             % Add a frame around the code
+    numbers=left,             % Line numbers on the left
+    numberstyle=\tiny,        % Line number style
+    basicstyle=\ttfamily\footnotesize, % Code font
+    keywordstyle=\color{blue}, % Keywords in blue
+    stringstyle=\color{red},  % Strings in red
+    commentstyle=\color{green!50!black}, % Comments in green
+    backgroundcolor=\color{gray!10}, % Light gray background
+    tabsize=4,                % Tab size
+    showstringspaces=false,   % Don't show spaces in strings
+    breaklines=true,          % Automatic line breaking
+    captionpos=b,             % Caption below the code
+    language=Python           % Language for syntax highlighting
+}
+
+
+\title{Report Labwork 1}
+\author{
+    Tran Minh Phuong - 22BI13366\\  
+}
+\date{November 2024}
+
+\setlength{\droptitle}{-5em} % Adjust the vertical space before the title
+
+\begin{document}
+
+\begin{figure}[H]
+    \textsc{\large \bfseries University of Science and Technology of Ha Noi}\\[0.5cm]
+    \centering
+    \includegraphics[width=0.8\linewidth]{usth.png}
+    \label{fig:project-overview}
+
+    \vspace{1cm}
+ 
+    \vspace{1cm}
+
+    \textsc{\Large \bfseries Distributed System}\\[1cm]
+    
+\end{figure}
+
+
+% Manual title to avoid page break
+\vspace{1cm}
+\begin{center}
+    \huge \textbf{\thetitle} \\[0.5cm]
+    \Large \theauthor [0.5cm]
+    \large \thedate
+\end{center}
+
+\vspace{4cm}
+\newpage
+\tableofcontents
+
+\newpage
+\section{Introduction}
+The target of the first practical lab work is transferring file from a client side to a server side over TCP/IP in CLI(Command Line Interface). This assignment plays an important role in understanding how two networks communicate through TCP protocol.
+
+\subsection{TCP and File Transfer over Sockets}
+TCP-Transmission Control Protocol-guarantees reliable, ordered, and error-checked delivery of data. File transfer over sockets involves the following:
+\begin{itemize}
+    \item Establish a connection between the client and the server.
+    \item Data transfer from the client and server.
+    \item Properly handling connection closure and EOF (End of File).
+\end{itemize}
+
+\section{Protocol Design}
+Below is the interaction diagram showing how the client and server communicate:
+
+\FloatBarrier
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+
+    % Server nodes
+    \node (start) [startstop] {Server};
+    \node (bind) [process, below of=start] {Bind and Listen};
+    \node (accept) [process, below of=bind] {Accept Connection};
+    \node (receive) [process, below of=accept] {Receive File};
+    \node (close) [startstop, below of=receive] {Close Connection};
+
+    % Arrows for Server
+    \draw [arrow] (start) -- (bind);
+    \draw [arrow] (bind) -- (accept);
+    \draw [arrow] (accept) -- (receive);
+    \draw [arrow] (receive) -- (close);
+
+    % Client nodes
+    \node (start_client) [startstop, right of=start, xshift=6cm] {Client};
+    \node (connect) [process, below of=start_client] {Connect to Server};
+    \node (check) [process, below of=connect] {Check File in System};
+    \node (send) [process, below of=check] {Send File};
+    \node (close_client) [startstop, below of=send] {Close Connection};
+
+    % Arrows for Client
+    \draw [arrow] (start_client) -- (connect);
+    \draw [arrow] (connect) -- (check);
+    \draw [arrow] (check) -- (send);
+    \draw [arrow] (send) -- (close_client);
+
+    % Connection Arrows
+    \draw [arrow] (connect.west) -- ++(-2.5,0) |- (accept.east);
+    \draw [arrow] (send.west) -- ++(0,0) |- (receive.east);
+
+    \end{tikzpicture}
+    \caption{Client-Server Interaction for TCP File Transfer}
+    \label{fig:protocol}
+\end{figure}
+\FloatBarrier
+
+
+\subsection{Logic of the Protocol}
+\begin{enumerate}
+    \item The server is initiated by binding to an IP address and port, then waits for connections from clients.
+    \item The client starts the process by initiating a connection to the server.
+    \item Once connected, the server waits for a file, the client checks the file name in the system and sends the entered file to the server
+    \item After the file is fully transferred, both the client and server close the connection properly.
+\end{enumerate}
+
+\section{System Organization}
+\subsection{System Architecture}
+The server and the client are 2 main components of the system. Their roles are described in the following:
+\begin{itemize}
+    \item \textbf{Server:} Handles incoming connections and receive file from clients.
+    \item \textbf{Client:} Connects to the server and sends files.
+\end{itemize}
+
+\subsection{Architecture Diagram}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[node distance=2.5cm]
+
+    % Nodes
+    \node (server) [ellipse] {Server};
+    \node (network) [ellipse, right of=server, xshift=4cm] {Network};
+    \node (client) [ellipse, right of=network, xshift=4cm] {Client};
+
+    % Arrows
+    \draw [arrow] (server.east) -- node[anchor=south] {Accept Connection} (network.west);
+    \draw [arrow] (network.east) -- node[anchor=south] {Request Connection} (client.west);
+    \draw [arrow] (client.west) -- node[anchor=north] {Send Data} (network.east);
+    \draw [arrow] (network.west) -- node[anchor=north] {Receive from Client} (server.east);
+
+    \end{tikzpicture}
+    \caption{System Architecture for TCP File Transfer}
+    \label{fig:system}
+\end{figure}
+
+\section{Implementation}
+\subsection{Key Code Snippets}
+\subsubsection{Server Code}
+The server code is responsible for listening to connections and sending files:
+\begin{lstlisting}[language=Python, caption=Server Code]
+import socket
+
+HOST = input("Your server ip address?\n") #enter your host ip address
+PORT = 2109  # port
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((HOST, PORT))
+    server_socket.listen(1)  
+    print(f"Server listening on {HOST}:{PORT}...")
+
+    while True:
+        conn, addr = server_socket.accept()
+        print(f"Connection established with {addr}")
+
+        
+        filename = b""
+        while True:
+            byte = conn.recv(1)
+            if byte == b'\n':  
+                break
+            filename += byte
+        filename = filename.decode('utf-8')  
+        print(f"Receiving file: {filename}")
+
+        
+        with open(filename, 'wb') as file:
+            while True:
+                data = conn.recv(1024)
+                if not data:  
+                    break
+                file.write(data)
+
+        print(f"File '{filename}' received and saved in the server folder.")
+        conn.close()  
+        print(f"Connection with {addr} closed.")
+
+if __name__ == "__main__":
+    start_server()
+
+\end{lstlisting}
+
+\subsubsection{Client Code}
+The client code connects to the server and receives the file:
+\begin{lstlisting}[language=Python, caption=Client Code]
+import socket
+import os
+
+SERVER_IP = input("Server's IP address you want to connect?\n")  
+PORT = 2109 
+
+def send_file():
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print(f"Attempting to connect to {SERVER_IP}:{PORT}...")
+        client_socket.connect((SERVER_IP, PORT))
+        print(f"Connected to server at {SERVER_IP}:{PORT}")
+
+        while True:
+            filename = input("Enter the full file name (with extension): ")
+            if os.path.isfile(filename):  # Ensure the file exists
+                break
+            print("File not found. Please try again.")
+
+        client_socket.send(filename.encode('utf-8') + b'\n')  # Send filename with newline delimiter
+
+        with open(filename, 'rb') as file:
+            print(f"Sending file '{filename}' to the server...")
+            while chunk := file.read(1024):  # Read in chunks of 1KB
+                client_socket.send(chunk)
+
+        print(f"File '{filename}' sent successfully to the server.")
+        client_socket.close()
+
+    except ConnectionRefusedError:
+        print("Connection failed: Ensure the server is running and reachable.")
+    except socket.timeout:
+        print("Connection timed out: Server is taking too long to respond.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    send_file()
+
+
+\end{lstlisting}
+
+\section{Lab work execution}
+The lab work was executed by me. The server side was running at a PC using Window 10 and client side was executed using laptop running Ubuntu 24.04.
+\begin{itemize}
+    \item \textbf{Window:} Run the server file and receive testwindow file from Ubuntu.
+    \item \textbf{Ubuntu:} Run the client file and send the testwindow file to server 
+\end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{server1.png}
+    \caption{The server initiates connection and receive a file from the client}
+    \label{fig:client}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{server2.jpeg}
+    \caption{The received file is the same as the file in client side}
+    \label{fig:client}
+\end{figure}
+
+
+
+\section{Conclusion}
+This labwork demonstrates the implementation of client and server connection over TCP/IP by Python which ensures correctness of the data content.
+
+\end{document}
